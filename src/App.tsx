@@ -3,48 +3,11 @@ import './App.css';
 import { Container, Button, Row, Col, Navbar } from 'react-bootstrap';
 import { Person } from './types/Person';
 import AddPersonModal from './components/AddPersonModal';
+import SearchBar from './components/SearchBar';
 import PersonList from './components/PersonList';
 
 const STORAGE_KEY = 'poolCheckInData';
 const PEOPLE_STORAGE_KEY = 'poolPeople';
-
-function SearchBar({ people, onSignIn }: { people: Person[]; onSignIn: (person: Person) => void }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredPeople = people.filter((person) => {
-    const query = searchTerm.toLowerCase().trim();
-    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
-    return query === '' || fullName.includes(query);
-  });
-
-  return (
-    <Container className="py-3">
-      <Row>
-        <Col md={8} className="mx-auto">
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Search people..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="mt-3">
-            {filteredPeople.map((person) => (
-              <Button
-                key={person.id}
-                variant="outline-primary"
-                className="me-2 mb-2"
-                onClick={() => onSignIn(person)}
-              >
-                Sign in {person.firstName} {person.lastName}
-              </Button>
-            ))}
-          </div>
-        </Col>
-      </Row>
-    </Container>
-  );
-}
 
 function App() {
   const [people, setPeople] = useState<Person[]>([]);
@@ -115,27 +78,24 @@ function App() {
   return (
     <div className="App">
       <Navbar bg="primary" variant="dark" className="mb-4">
-        <Container>
+        <Container className="d-flex justify-content-between align-items-center">
           <Navbar.Brand className="fw-bold">🏊 Pool Check-In</Navbar.Brand>
+          <Button
+            variant="light"
+            onClick={() => setShowAddModal(true)}
+          >
+            + Add Person
+          </Button>
         </Container>
       </Navbar>
 
       <Container className="py-4">
-        <Row className="mb-4">
-          <Col md={6} className="mx-auto">
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-100"
-              onClick={() => setShowAddModal(true)}
-            >
-              + Add New Person
-            </Button>
+        <Row>
+          <Col md={8} className="mx-auto">
+            <SearchBar people={people} onSignIn={handleSignIn} />
           </Col>
         </Row>
       </Container>
-
-      <SearchBar people={people} onSignIn={handleSignIn} />
 
       <Container className="py-4">
         <Row>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, ListGroup, Button, Badge } from 'react-bootstrap';
+import { ListGroup, Button, Badge } from 'react-bootstrap';
 import { Person } from '../types/Person';
 
 interface PersonListProps {
@@ -9,25 +9,19 @@ interface PersonListProps {
 
 function PersonList({ people, onRemovePerson }: PersonListProps) {
   if (people.length === 0) {
-    return (
-      <Card className="text-center py-5">
-        <Card.Body>
-          <p className="text-muted mb-0">No one checked in yet. Search to sign someone in!</p>
-        </Card.Body>
-      </Card>
-    );
+    return null;
   }
 
   return (
-    <Card>
-      <Card.Header>
-        <Card.Title className="mb-0">
+    <div className="person-list-container">
+      <div className="person-list-header">
+        <h5 className="mb-0">
           Checked In: <Badge bg="success">{people.length}</Badge>
-        </Card.Title>
-      </Card.Header>
-      <ListGroup variant="flush">
+        </h5>
+      </div>
+      <ListGroup variant="flush" className="person-list">
         {people.map((person) => (
-          <ListGroup.Item key={person.id}>
+          <ListGroup.Item key={person.id} className="person-list-item">
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="mb-1">
@@ -48,7 +42,7 @@ function PersonList({ people, onRemovePerson }: PersonListProps) {
           </ListGroup.Item>
         ))}
       </ListGroup>
-    </Card>
+    </div>
   );
 }
 
