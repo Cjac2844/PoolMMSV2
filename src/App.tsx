@@ -1,53 +1,158 @@
-import React, { useState } from 'react';
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
 import './App.css';
-import { Button, Form } from 'react-bootstrap';
+import { Container, Button, Row, Col, Navbar } from 'react-bootstrap';
+import { Person } from './types/Person';
+import AddPersonModal from './components/AddPersonModal';
+import PersonList from './components/PersonList';
 
-//local storage and API Key: key should be entered in by the user and will be stored in local storage (NOT session storage)
-let keyData = "";
-const saveKeyData = "MYKEY";
-const prevKey = localStorage.getItem(saveKeyData); //so it'll look like: MYKEY: <api_key_value here> in the local storage when you inspect
-if (prevKey !== null) {
-  keyData = JSON.parse(prevKey);
+const STORAGE_KEY = 'poolCheckInData';
+const PEOPLE_STORAGE_KEY = 'poolPeople';
+
+function SearchBar({ people, onSignIn }: { people: Person[]; onSignIn: (person: Person) => void }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredPeople = people.filter((person) => {
+    const query = searchTerm.toLowerCase().trim();
+    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
+    return query === '' || fullName.includes(query);
+  });
+
+  return (
+    <Container className="py-3">
+      <Row>
+        <Col md={8} className="mx-auto">
+          <input
+            type="search"
+            className="form-control"
+            placeholder="Search people..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div className="mt-3">
+            {filteredPeople.map((person) => (
+              <Button
+                key={person.id}
+                variant="outline-primary"
+                className="me-2 mb-2"
+                onClick={() => onSignIn(person)}
+              >
+                Sign in {person.firstName} {person.lastName}
+              </Button>
+            ))}
+          </div>
+        </Col>
+      </Row>
+    </Container>
+  );
 }
 
 function App() {
-  const [key, setKey] = useState<string>(keyData); //for api key input
-  
-  //sets the local storage item to the api key the user inputed
-  function handleSubmit() {
-    localStorage.setItem(saveKeyData, JSON.stringify(key));
-    window.location.reload(); //when making a mistake and changing the key again, I found that I have to reload the whole site before openai refreshes what it has stores for the local storage variable
-  }
+  const [people, setPeople] = useState<Person[]>([]);
+  const [checkedInPeople, setCheckedInPeople] = useState<Person[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  //whenever there's a change it'll store the api key in a local state called key but it won't be set in the local storage until the user clicks the submit button
-  function changeKey(event: React.ChangeEvent<HTMLInputElement>) {
-    setKey(event.target.value);
-  }
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const savedPeople = localStorage.getItem(PEOPLE_STORAGE_KEY);
+    if (savedPeople) {
+      try {
+        const parsedData = JSON.parse(savedPeople);
+        setPeople(parsedData);
+      } catch (error) {
+        console.error('Error loading people data:', error);
+      }
+    }
+
+    const savedCheckedIn = localStorage.getItem(STORAGE_KEY);
+    if (savedCheckedIn) {
+      try {
+        const parsedData = JSON.parse(savedCheckedIn);
+        setCheckedInPeople(
+          parsedData.map((person: any) => ({
+            ...person,
+            checkedInTime: new Date(person.checkedInTime),
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading checked-in data:', error);
+      }
+    }
+  }, []);
+
+  // Save people data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
+  }, [people]);
+
+  // Save checked-in data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedInPeople));
+  }, [checkedInPeople]);
+
+  const handleAddPerson = (firstName: string, lastName: string) => {
+    const newPerson: Person = {
+      id: `${Date.now()}-${Math.random()}`,
+      firstName,
+      lastName,
+      checkedInTime: new Date(),
+    };
+    setPeople([...people, newPerson]);
+  };
+
+  const handleSignIn = (person: Person) => {
+    const signedInPerson: Person = {
+      ...person,
+      id: `checked-${Date.now()}-${Math.random()}`,
+      checkedInTime: new Date(),
+    };
+    setCheckedInPeople([signedInPerson, ...checkedInPeople]);
+  };
+
+  const handleRemovePerson = (id: string) => {
+    setCheckedInPeople(checkedInPeople.filter((person) => person.id !== id));
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-      <Form>
-        <Form.Label>API Key:</Form.Label>
-        <Form.Control type="password" placeholder="Insert API Key Here" onChange={changeKey}></Form.Control>
-        <br></br>
-        <Button className="Submit-Button" onClick={handleSubmit}>Submit</Button>
-      </Form>
+      <Navbar bg="primary" variant="dark" className="mb-4">
+        <Container>
+          <Navbar.Brand className="fw-bold">🏊 Pool Check-In</Navbar.Brand>
+        </Container>
+      </Navbar>
+
+      <Container className="py-4">
+        <Row className="mb-4">
+          <Col md={6} className="mx-auto">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-100"
+              onClick={() => setShowAddModal(true)}
+            >
+              + Add New Person
+            </Button>
+          </Col>
+        </Row>
+      </Container>
+
+      <SearchBar people={people} onSignIn={handleSignIn} />
+
+      <Container className="py-4">
+        <Row>
+          <Col md={8} className="mx-auto">
+            <PersonList people={checkedInPeople} onRemovePerson={handleRemovePerson} />
+          </Col>
+        </Row>
+      </Container>
+
+      <AddPersonModal
+        show={showAddModal}
+        onHide={() => setShowAddModal(false)}
+        onAddPerson={handleAddPerson}
+      />
     </div>
   );
 }
 
 export default App;
+
