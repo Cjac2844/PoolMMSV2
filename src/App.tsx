@@ -131,7 +131,7 @@ function App() {
     <div className="App">
       <Navbar bg="primary" variant="dark" className="mb-4">
         <Container className="d-flex justify-content-between align-items-center">
-          <Navbar.Brand className="fw-bold">PoolMMS</Navbar.Brand>
+          <Navbar.Brand className="fw-bold">Haddon Glen Swim Club</Navbar.Brand>
           <Button
             variant="light"
             onClick={() => setShowAddModal(true)}
