@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { Container, Button, Row, Col, Navbar } from 'react-bootstrap';
+import { Container, Button, Row, Col, Navbar, Card, Alert } from 'react-bootstrap';
 import { Person } from './types/Person';
 import AddPersonModal from './components/AddPersonModal';
 import SearchBar from './components/SearchBar';
@@ -8,11 +8,16 @@ import PersonList from './components/PersonList';
 
 const STORAGE_KEY = 'poolCheckInData';
 const PEOPLE_STORAGE_KEY = 'poolPeople';
+const TOAST_DURATION_MS = 2200;
 
 function App() {
   const [people, setPeople] = useState<Person[]>([]);
   const [checkedInPeople, setCheckedInPeople] = useState<Person[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [searchTermFromPanel, setSearchTermFromPanel] = useState('');
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -58,38 +63,53 @@ function App() {
       firstName,
       lastName,
       checkedInTime: new Date(),
+      personType: 'Swim Club Membership',
+      familyName: lastName,
     };
-    setPeople([...people, newPerson]);
+    setPeople((previousPeople) => [...previousPeople, newPerson]);
   };
 
   const handleSignIn = (person: Person) => {
     const signedInPerson: Person = {
       ...person,
-      id: `checked-${Date.now()}-${Math.random()}`,
       checkedInTime: new Date(),
     };
-    setCheckedInPeople([signedInPerson, ...checkedInPeople]);
+    setCheckedInPeople((previousPeople) => {
+      if (previousPeople.some((checkedInPerson) => checkedInPerson.id === person.id)) {
+        return previousPeople;
+      }
+      return [signedInPerson, ...previousPeople];
+    });
+    setToastMessage(`${person.firstName} ${person.lastName} signed in!`);
+    setShowToast(true);
   };
 
   const handleSignOut = (person: Person) => {
-    // Remove the most recent check-in for this person (by first name and last name)
-    const indexToRemove = checkedInPeople.findIndex(
-      (p) => p.firstName === person.firstName && p.lastName === person.lastName
+    setCheckedInPeople((previousPeople) =>
+      previousPeople.filter((checkedInPerson) => checkedInPerson.id !== person.id)
     );
-    if (indexToRemove !== -1) {
-      setCheckedInPeople(checkedInPeople.filter((_, index) => index !== indexToRemove));
-    }
+    setToastMessage(`${person.firstName} ${person.lastName} signed out!`);
+    setShowToast(true);
   };
 
-  const handleRemovePerson = (id: string) => {
-    setCheckedInPeople(checkedInPeople.filter((person) => person.id !== id));
-  };
+  useEffect(() => {
+    if (!showToast) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setShowToast(false), TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [showToast, toastMessage]);
+
+  const selectedFamilyName = selectedPerson?.familyName ?? selectedPerson?.lastName;
+  const selectedFamily = selectedPerson
+    ? people.filter((person) => (person.familyName ?? person.lastName) === selectedFamilyName)
+    : [];
 
   return (
     <div className="App">
       <Navbar bg="primary" variant="dark" className="mb-4">
         <Container className="d-flex justify-content-between align-items-center">
-          <Navbar.Brand className="fw-bold">🏊 Pool Check-In</Navbar.Brand>
+          <Navbar.Brand className="fw-bold">PoolMMS</Navbar.Brand>
           <Button
             variant="light"
             onClick={() => setShowAddModal(true)}
@@ -100,25 +120,73 @@ function App() {
       </Navbar>
 
       <Container className="py-4">
-        <Row>
-          <Col md={8} className="mx-auto">
+        <Row className="g-3 align-items-start">
+          <Col lg={8}>
             <SearchBar 
               people={people} 
               checkedInPeople={checkedInPeople}
               onSignIn={handleSignIn}
               onSignOut={handleSignOut}
+              onSelectPerson={setSelectedPerson}
+              externalSearchTerm={searchTermFromPanel}
             />
+            <PersonList
+              people={checkedInPeople}
+              onSignOut={handleSignOut}
+              onSelectPerson={setSelectedPerson}
+            />
+          </Col>
+          <Col lg={4}>
+            {selectedPerson && (
+              <Card className="detail-panel">
+                <Card.Body>
+                  <h5 className="mb-3">{selectedPerson.firstName} {selectedPerson.lastName}</h5>
+                  <div className="detail-grid">
+                    <div><strong>Age:</strong> {selectedPerson.age ?? '--'}</div>
+                    <div><strong>Family Name:</strong> {selectedPerson.familyName ?? selectedPerson.lastName}</div>
+                    <div><strong>Member Type:</strong> {selectedPerson.personType ?? 'Swim Club Membership'}</div>
+                    <div><strong>Last Visit:</strong> {selectedPerson.lastVisit ? new Date(selectedPerson.lastVisit).toLocaleDateString() : 'N/A'}</div>
+                  </div>
+                  <Card className="mt-3">
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                      <span>Notes</span>
+                      <Button size="sm" variant="outline-secondary">Edit</Button>
+                    </Card.Header>
+                    <Card.Body>{selectedPerson.notes ?? 'No notes yet.'}</Card.Body>
+                  </Card>
+                  <Button className="w-100 mt-3" variant="outline-primary">Take A Photo</Button>
+                  <div className="d-flex gap-2 mt-3">
+                    <Button variant="secondary" className="flex-fill" onClick={() => setSelectedPerson(null)}>BACK</Button>
+                    <Button
+                      variant="primary"
+                      className="flex-fill"
+                      onClick={() =>
+                        setSearchTermFromPanel(selectedPerson.familyName ?? selectedPerson.lastName)
+                      }
+                    >
+                      SEARCH FOR FAMILY
+                    </Button>
+                  </div>
+                  <Card className="mt-3">
+                    <Card.Header>Family Information</Card.Header>
+                    <Card.Body>
+                      {selectedFamily.map((person) => (
+                        <div key={person.id}>{person.firstName} {person.lastName}</div>
+                      ))}
+                    </Card.Body>
+                  </Card>
+                </Card.Body>
+              </Card>
+            )}
           </Col>
         </Row>
       </Container>
 
-      <Container className="py-4">
-        <Row>
-          <Col md={8} className="mx-auto">
-            <PersonList people={checkedInPeople} onRemovePerson={handleRemovePerson} />
-          </Col>
-        </Row>
-      </Container>
+      {showToast && (
+        <Alert className="sign-toast mb-0">
+          {toastMessage}
+        </Alert>
+      )}
 
       <AddPersonModal
         show={showAddModal}
@@ -130,4 +198,3 @@ function App() {
 }
 
 export default App;
-

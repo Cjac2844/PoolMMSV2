@@ -1,48 +1,60 @@
 import React from 'react';
-import { ListGroup, Button, Badge } from 'react-bootstrap';
+import { Button, Badge, Card, Table } from 'react-bootstrap';
 import { Person } from '../types/Person';
 
 interface PersonListProps {
   people: Person[];
-  onRemovePerson: (id: string) => void;
+  onSignOut: (person: Person) => void;
+  onSelectPerson: (person: Person) => void;
 }
 
-function PersonList({ people, onRemovePerson }: PersonListProps) {
+function PersonList({ people, onSignOut, onSelectPerson }: PersonListProps) {
   if (people.length === 0) {
     return null;
   }
 
   return (
-    <div className="person-list-container">
-      <div className="person-list-header">
-        <h5 className="mb-0">
-          Checked In: <Badge bg="success">{people.length}</Badge>
-        </h5>
-      </div>
-      <ListGroup variant="flush" className="person-list">
-        {people.map((person) => (
-          <ListGroup.Item key={person.id} className="person-list-item">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-1">
-                  {person.firstName} {person.lastName}
-                </h6>
-                <small className="text-muted">
-                  Signed in at {new Date(person.checkedInTime).toLocaleTimeString()}
-                </small>
-              </div>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => onRemovePerson(person.id)}
-              >
-                Remove
-              </Button>
-            </div>
-          </ListGroup.Item>
-        ))}
-      </ListGroup>
-    </div>
+    <Card className="mt-3">
+      <Card.Header className="d-flex justify-content-between align-items-center">
+        <h5 className="mb-0">Checked-In Members</h5>
+        <Badge bg="secondary">{people.length}</Badge>
+      </Card.Header>
+      <Card.Body className="p-0">
+        <Table responsive hover className="mb-0">
+          <thead>
+            <tr>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Type</th>
+              <th>In At</th>
+              <th>Sign Out</th>
+            </tr>
+          </thead>
+          <tbody>
+            {people.map((person) => (
+              <tr key={person.id} onClick={() => onSelectPerson(person)} className="selectable-row">
+                <td>{person.firstName}</td>
+                <td>{person.lastName}</td>
+                <td>{person.personType ?? 'Swim Club Membership'}</td>
+                <td>{new Date(person.checkedInTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}</td>
+                <td>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSignOut(person);
+                    }}
+                  >
+                    SIGN OUT
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Card.Body>
+    </Card>
   );
 }
 
