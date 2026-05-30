@@ -39,6 +39,7 @@ function App() {
           parsedData.map((person: any) => ({
             ...person,
             checkedInTime: new Date(person.checkedInTime),
+            lastVisit: person.lastVisit ? new Date(person.lastVisit) : undefined,
           }))
         );
       } catch (error) {
@@ -57,13 +58,14 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedInPeople));
   }, [checkedInPeople]);
 
-  const handleAddPerson = (firstName: string, lastName: string) => {
+  const handleAddPerson = (firstName: string, lastName: string, age: number | undefined, personType: string) => {
     const newPerson: Person = {
       id: `${Date.now()}-${Math.random()}`,
       firstName,
       lastName,
       checkedInTime: new Date(),
-      personType: 'Swim Club Membership',
+      personType,
+      age,
       familyName: lastName,
     };
     setPeople((previousPeople) => [...previousPeople, newPerson]);
@@ -73,6 +75,7 @@ function App() {
     const signedInPerson: Person = {
       ...person,
       checkedInTime: new Date(),
+      lastVisit: new Date(),
     };
     setCheckedInPeople((previousPeople) => {
       if (previousPeople.some((checkedInPerson) => checkedInPerson.id === person.id)) {
@@ -80,6 +83,14 @@ function App() {
       }
       return [signedInPerson, ...previousPeople];
     });
+    
+    // Also update the person in the people list with the new lastVisit
+    setPeople((previousPeople) =>
+      previousPeople.map((p) =>
+        p.id === person.id ? { ...p, lastVisit: new Date() } : p
+      )
+    );
+    
     setToastMessage(`${person.firstName} ${person.lastName} signed in!`);
     setShowToast(true);
   };
@@ -90,6 +101,17 @@ function App() {
     );
     setToastMessage(`${person.firstName} ${person.lastName} signed out!`);
     setShowToast(true);
+  };
+
+  const handleUpdatePerson = (updatedPerson: Person) => {
+    // Update in people array
+    setPeople((previousPeople) =>
+      previousPeople.map((person) =>
+        person.id === updatedPerson.id ? updatedPerson : person
+      )
+    );
+    // Update selected person
+    setSelectedPerson(updatedPerson);
   };
 
   useEffect(() => {
@@ -148,13 +170,23 @@ function App() {
                     <div><strong>Last Visit:</strong> {selectedPerson.lastVisit ? new Date(selectedPerson.lastVisit).toLocaleDateString() : 'N/A'}</div>
                   </div>
                   <Card className="mt-3">
-                    <Card.Header className="d-flex justify-content-between align-items-center">
-                      <span>Notes</span>
-                      <Button size="sm" variant="outline-secondary">Edit</Button>
-                    </Card.Header>
-                    <Card.Body>{selectedPerson.notes ?? 'No notes yet.'}</Card.Body>
+                    <Card.Header>Notes</Card.Header>
+                    <Card.Body>
+                      <textarea
+                        className="form-control"
+                        rows={3}
+                        value={selectedPerson.notes ?? ''}
+                        onChange={(e) =>
+                          handleUpdatePerson({
+                            ...selectedPerson,
+                            notes: e.target.value || undefined,
+                          })
+                        }
+                        placeholder="Add notes here..."
+                      />
+                      <small className="text-muted d-block mt-2">Changes save automatically</small>
+                    </Card.Body>
                   </Card>
-                  <Button className="w-100 mt-3" variant="outline-primary">Take A Photo</Button>
                   <div className="d-flex gap-2 mt-3">
                     <Button variant="secondary" className="flex-fill" onClick={() => setSelectedPerson(null)}>BACK</Button>
                     <Button

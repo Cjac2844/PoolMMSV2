@@ -4,18 +4,27 @@ import { Modal, Button, Form } from 'react-bootstrap';
 interface AddPersonModalProps {
   show: boolean;
   onHide: () => void;
-  onAddPerson: (firstName: string, lastName: string) => void;
+  onAddPerson: (firstName: string, lastName: string, age: number | undefined, personType: string) => void;
 }
 
 function AddPersonModal({ show, onHide, onAddPerson }: AddPersonModalProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [age, setAge] = useState('');
+  const [personType, setPersonType] = useState('Swim Club Membership');
 
   const handleAdd = () => {
     if (firstName.trim() && lastName.trim()) {
-      onAddPerson(firstName, lastName);
+      onAddPerson(
+        firstName,
+        lastName,
+        age ? parseInt(age) : undefined,
+        personType
+      );
       setFirstName('');
       setLastName('');
+      setAge('');
+      setPersonType('Swim Club Membership');
       onHide();
     }
   };
@@ -23,6 +32,8 @@ function AddPersonModal({ show, onHide, onAddPerson }: AddPersonModalProps) {
   const handleClose = () => {
     setFirstName('');
     setLastName('');
+    setAge('');
+    setPersonType('Swim Club Membership');
     onHide();
   };
 
@@ -52,6 +63,28 @@ function AddPersonModal({ show, onHide, onAddPerson }: AddPersonModalProps) {
               onChange={(e) => setLastName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
             />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Age</Form.Label>
+            <Form.Control
+              type="number"
+              placeholder="Enter age (optional)"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              min="0"
+              max="120"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Membership Type</Form.Label>
+            <Form.Select
+              value={personType}
+              onChange={(e) => setPersonType(e.target.value)}
+            >
+              <option value="Swim Club Membership">Swim Club Membership</option>
+              <option value="Haddon Glen Seahorse Registration">Haddon Glen Seahorse Registration</option>
+              <option value="Guest">Guest</option>
+            </Form.Select>
           </Form.Group>
         </Form>
       </Modal.Body>
