@@ -76,10 +76,10 @@ function SearchBar({
             <InputGroup>
               <Form.Control
                 type="text"
-                placeholder="Scan a card or enter a last name"
+                placeholder="Enter a last name"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Scan a card or enter a last name"
+                aria-label="Enter a last name"
               />
               <Button type="submit" variant="secondary">GO</Button>
             </InputGroup>
