@@ -5,15 +5,18 @@ import '../styles/SearchBar.css';
 
 interface SearchBarProps {
   people: Person[];
+  checkedInPeople: Person[];
   onSignIn: (person: Person) => void;
+  onSignOut: (person: Person) => void;
 }
 
-function SearchBar({ people, onSignIn }: SearchBarProps) {
+function SearchBar({ people, checkedInPeople, onSignIn, onSignOut }: SearchBarProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [signedInIds, setSignedInIds] = useState<Set<string>>(new Set());
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
@@ -33,12 +36,29 @@ function SearchBar({ people, onSignIn }: SearchBarProps) {
     onSignIn(person);
     setSuccessMessage(`${person.firstName} ${person.lastName} signed in!`);
     setShowSuccessMessage(true);
+    // Add this person's ID to the signed-in set without using spread on Set
+    const newSignedIn = new Set(signedInIds);
+    newSignedIn.add(person.id);
+    setSignedInIds(newSignedIn);
     setTimeout(() => {
       setShowSuccessMessage(false);
-      setSearchTerm('');
-      setFilteredPeople([]);
     }, 2000);
   };
+
+  const handleSignOut = (person: Person) => {
+    onSignOut(person);
+    setSuccessMessage(`${person.firstName} ${person.lastName} signed out!`);
+    setShowSuccessMessage(true);
+    // Remove this person's ID from the signed-in set
+    const newSignedInIds = new Set(signedInIds);
+    newSignedInIds.delete(person.id);
+    setSignedInIds(newSignedInIds);
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+    }, 2000);
+  };
+
+  const isPersonSignedIn = (personId: string) => signedInIds.has(personId);
 
   return (
     <Container className="py-4">
@@ -83,34 +103,37 @@ function SearchBar({ people, onSignIn }: SearchBarProps) {
         <Row>
           <Col md={8} className="mx-auto">
             <div className="search-results">
-              {filteredPeople.map((person) => (
-                <div key={person.id} className="search-result-row">
-                  <span className="person-name">
-                    {person.firstName} {person.lastName}
-                  </span>
-                  <Button
-                    variant="success"
-                    onClick={() => handleSignIn(person)}
-                    className="sign-in-btn"
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              ))}
+              {filteredPeople.map((person) => {
+                const isSignedIn = isPersonSignedIn(person.id);
+                return (
+                  <div key={person.id} className="search-result-row">
+                    <span className="person-name">
+                      {person.firstName} {person.lastName}
+                    </span>
+                    <Button
+                      variant={isSignedIn ? 'danger' : 'success'}
+                      onClick={() => isSignedIn ? handleSignOut(person) : handleSignIn(person)}
+                      className="sign-in-btn"
+                    >
+                      {isSignedIn ? 'Sign Out' : 'Sign In'}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </Col>
         </Row>
       )}
 
-       {/* !isLoading && searchTerm.trim() && filteredPeople.length === 0 && (
-        <Row>
-          <Col md={8} className="mx-auto">
-            <Alert variant="warning" className="mb-0">
-              No people found with last name "{searchTerm}". Try adding them first!
-            </Alert>
-          </Col>
-        </Row>
-      )*/}
+      {/* !isLoading && searchTerm.trim() && filteredPeople.length === 0 && (
+         <Row>
+           <Col md={8} className="mx-auto">
+             <Alert variant="warning" className="mb-0">
+               No people found with last name "{searchTerm}". Try adding them first!
+             </Alert>
+           </Col>
+         </Row>
+       )*/}
     </Container>
   );
 }

@@ -71,6 +71,16 @@ function App() {
     setCheckedInPeople([signedInPerson, ...checkedInPeople]);
   };
 
+  const handleSignOut = (person: Person) => {
+    // Remove the most recent check-in for this person (by first name and last name)
+    const indexToRemove = checkedInPeople.findIndex(
+      (p) => p.firstName === person.firstName && p.lastName === person.lastName
+    );
+    if (indexToRemove !== -1) {
+      setCheckedInPeople(checkedInPeople.filter((_, index) => index !== indexToRemove));
+    }
+  };
+
   const handleRemovePerson = (id: string) => {
     setCheckedInPeople(checkedInPeople.filter((person) => person.id !== id));
   };
@@ -92,7 +102,12 @@ function App() {
       <Container className="py-4">
         <Row>
           <Col md={8} className="mx-auto">
-            <SearchBar people={people} onSignIn={handleSignIn} />
+            <SearchBar 
+              people={people} 
+              checkedInPeople={checkedInPeople}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+            />
           </Col>
         </Row>
       </Container>
