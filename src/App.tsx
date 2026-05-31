@@ -5,6 +5,7 @@ import { Person } from './types/Person';
 import AddPersonModal from './components/AddPersonModal';
 import SearchBar from './components/SearchBar';
 import PersonList from './components/PersonList';
+import BandTestModal from './components/BandTestModal';
 
 const STORAGE_KEY = 'poolCheckInData';
 const PEOPLE_STORAGE_KEY = 'poolPeople';
@@ -14,6 +15,7 @@ function App() {
   const [people, setPeople] = useState<Person[]>([]);
   const [checkedInPeople, setCheckedInPeople] = useState<Person[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBandTestModal, setShowBandTestModal] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -25,7 +27,13 @@ function App() {
     if (savedPeople) {
       try {
         const parsedData = JSON.parse(savedPeople);
-        setPeople(parsedData);
+        setPeople(parsedData.map((person: any) => ({
+          ...person,
+          bandTests: person.bandTests?.map((test: any) => ({
+            ...test,
+            issuedAt: new Date(test.issuedAt),
+          })) || [],
+        })));
       } catch (error) {
         console.error('Error loading people data:', error);
       }
@@ -67,6 +75,7 @@ function App() {
       personType,
       age,
       familyName: lastName,
+      bandTests: [],
     };
     setPeople((previousPeople) => [...previousPeople, newPerson]);
   };
@@ -140,6 +149,12 @@ function App() {
         <Container className="d-flex justify-content-between align-items-center">
           <Navbar.Brand className="fw-bold">Haddon Glen Swim Club</Navbar.Brand>
           <div className="d-flex gap-2">
+            <Button
+              variant="warning"
+              onClick={() => setShowBandTestModal(true)}
+            >
+              Band Test
+            </Button>
             <Button
               variant="light"
               onClick={() => setShowAddModal(true)}
@@ -242,6 +257,12 @@ function App() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <BandTestModal
+        show={showBandTestModal}
+        onHide={() => setShowBandTestModal(false)}
+        people={people}
+      />
 
       <AddPersonModal
         show={showAddModal}
