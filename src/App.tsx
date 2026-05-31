@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { Container, Button, Row, Col, Navbar, Card, Alert } from 'react-bootstrap';
+import { Container, Button, Row, Col, Navbar, Card, Alert, Modal } from 'react-bootstrap';
 import { Person } from './types/Person';
 import AddPersonModal from './components/AddPersonModal';
 import SearchBar from './components/SearchBar';
@@ -18,6 +18,7 @@ function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [searchTermFromPanel, setSearchTermFromPanel] = useState('');
+  const [showSignOutAllWarning, setShowSignOutAllWarning] = useState(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -103,6 +104,13 @@ function App() {
     setShowToast(true);
   };
 
+  const handleSignOutAll = () => {
+    setCheckedInPeople([]);
+    setShowSignOutAllWarning(false);
+    setToastMessage('All guests signed out!');
+    setShowToast(true);
+  };
+
   const handleUpdatePerson = (updatedPerson: Person) => {
     // Update in people array
     setPeople((previousPeople) =>
@@ -132,12 +140,21 @@ function App() {
       <Navbar bg="primary" variant="dark" className="mb-4">
         <Container className="d-flex justify-content-between align-items-center">
           <Navbar.Brand className="fw-bold">Haddon Glen Swim Club</Navbar.Brand>
-          <Button
-            variant="light"
-            onClick={() => setShowAddModal(true)}
-          >
-            + Add Person
-          </Button>
+          <div className="d-flex gap-2">
+            <Button
+              variant="light"
+              onClick={() => setShowAddModal(true)}
+            >
+              + Add Person
+            </Button>
+            <Button 
+              variant="danger" 
+              onClick={() => setShowSignOutAllWarning(true)}
+              disabled={checkedInPeople.length === 0}
+            >
+              Sign Out All
+            </Button>
+          </div>
         </Container>
       </Navbar>
 
@@ -188,16 +205,7 @@ function App() {
                     </Card.Body>
                   </Card>
                   <div className="d-flex gap-2 mt-3">
-                    <Button variant="secondary" className="flex-fill" onClick={() => setSelectedPerson(null)}>BACK</Button>
-                    <Button
-                      variant="primary"
-                      className="flex-fill"
-                      onClick={() =>
-                        setSearchTermFromPanel(selectedPerson.familyName ?? selectedPerson.lastName)
-                      }
-                    >
-                      SEARCH FOR FAMILY
-                    </Button>
+                    <Button variant="secondary" className="w-100" onClick={() => setSelectedPerson(null)}>BACK</Button>
                   </div>
                   <Card className="mt-3">
                     <Card.Header>Family Information</Card.Header>
@@ -220,6 +228,23 @@ function App() {
         </Alert>
       )}
 
+      <Modal show={showSignOutAllWarning} onHide={() => setShowSignOutAllWarning(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Sign Out All</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>This will sign out <strong>everyone</strong> who is currently checked in. Are you sure you want to do this?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSignOutAllWarning(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleSignOutAll}>
+            Sign Everyone Out
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       <AddPersonModal
         show={showAddModal}
         onHide={() => setShowAddModal(false)}
@@ -231,4 +256,4 @@ function App() {
 
 export default App;
 
-// Test rebuild
+
