@@ -1,3 +1,10 @@
+export interface BandTest {
+  id: string;
+  bandType: 'Red Band' | 'Green Band';
+  issuedBy: string;
+  issuedAt: Date;
+}
+
 export interface Person {
   id: string;
   firstName: string;
@@ -8,4 +15,5 @@ export interface Person {
   age?: number;
   notes?: string;
   lastVisit?: Date;
+  bandTests?: BandTest[];
 }
