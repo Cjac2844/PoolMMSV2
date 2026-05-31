@@ -17,7 +17,6 @@ function App() {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const [searchTermFromPanel, setSearchTermFromPanel] = useState('');
   const [showSignOutAllWarning, setShowSignOutAllWarning] = useState(false);
 
   // Load data from localStorage on mount
@@ -167,7 +166,6 @@ function App() {
               onSignIn={handleSignIn}
               onSignOut={handleSignOut}
               onSelectPerson={setSelectedPerson}
-              externalSearchTerm={searchTermFromPanel}
             />
             <PersonList
               people={checkedInPeople}
@@ -255,5 +253,4 @@ function App() {
 }
 
 export default App;
-
 
