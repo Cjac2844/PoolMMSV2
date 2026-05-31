@@ -262,6 +262,7 @@ function App() {
         show={showBandTestModal}
         onHide={() => setShowBandTestModal(false)}
         people={people}
+        onUpdatePerson={handleUpdatePerson}
       />
 
       <AddPersonModal

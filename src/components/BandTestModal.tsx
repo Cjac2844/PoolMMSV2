@@ -7,9 +7,10 @@ interface BandTestModalProps {
   show: boolean;
   onHide: () => void;
   people: Person[];
+  onUpdatePerson: (person: Person) => void;
 }
 
-function BandTestModal({ show, onHide, people }: BandTestModalProps) {
+function BandTestModal({ show, onHide, people, onUpdatePerson }: BandTestModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [selectedPersonForBand, setSelectedPersonForBand] = useState<Person | null>(null);
@@ -57,18 +58,25 @@ function BandTestModal({ show, onHide, people }: BandTestModalProps) {
       issuedAt: new Date(),
     };
 
-    // Update person with new band test
+    // Update person with new band test and persist to parent
     const updatedPerson = {
       ...selectedPersonForBand,
       bandTests: [...(selectedPersonForBand.bandTests || []), newBandTest],
     };
 
-    // Note: The actual update happens in the parent component
-    // This is just the UI for issuing
+    // Call parent's update function to persist to localStorage
+    onUpdatePerson(updatedPerson);
+    
+    // Update local state to reflect the change
     setSelectedPersonForBand(updatedPerson);
     setIssuer('');
     setBandType('Red Band');
-    alert(`Band issued successfully to ${selectedPersonForBand.firstName} ${selectedPersonForBand.lastName}!`);
+    setIssuingBand(false);
+    
+    // Also update in filtered results so search results reflect new band
+    setFilteredPeople(
+      filteredPeople.map(p => p.id === updatedPerson.id ? updatedPerson : p)
+    );
   };
 
   const handleClose = () => {
