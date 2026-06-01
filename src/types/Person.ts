@@ -5,6 +5,11 @@ export interface BandTest {
   issuedAt: Date;
 }
 
+export interface GuestPass {
+  familyName: string;
+  passesRemaining: number;
+}
+
 export interface Person {
   id: string;
   firstName: string;
@@ -16,4 +21,6 @@ export interface Person {
   notes?: string;
   lastVisit?: Date;
   bandTests?: BandTest[];
+  isGuest?: boolean;
+  sponsoringMemberId?: string;
 }
