@@ -10,7 +10,7 @@ import DeletePersonModal from './components/DeletePersonModal';
 import SignInGuestModal from './components/SignInGuestModal';
 
 const STORAGE_KEY = 'poolCheckInData';
-const PEOPLE_STORAGE_KEY = 'poolPeople';
+const MEMBERS_STORAGE_KEY = 'poolMembers';
 const GUEST_PASSES_STORAGE_KEY = 'poolGuestPasses';
 const TOAST_DURATION_MS = 2200;
 
@@ -29,25 +29,40 @@ function App() {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [editedNotes, setEditedNotes] = useState('');
 
-  // Load data from localStorage on mount
+  // Load data from localStorage and JSON on mount
   useEffect(() => {
-    const savedPeople = localStorage.getItem(PEOPLE_STORAGE_KEY);
-    if (savedPeople) {
+    // Load members from JSON file
+    const loadMembers = async () => {
       try {
-        const parsedData = JSON.parse(savedPeople);
-        setPeople(parsedData.map((person: any) => ({
+        const response = await fetch('/members.json');
+        const data = await response.json();
+        
+        // Check for cached member updates (notes, band tests)
+        const cachedMembers = localStorage.getItem(MEMBERS_STORAGE_KEY);
+        let memberUpdates: { [key: string]: any } = {};
+        
+        if (cachedMembers) {
+          try {
+            memberUpdates = JSON.parse(cachedMembers);
+          } catch (e) {
+            console.error('Error parsing cached members:', e);
+          }
+        }
+        
+        const loadedMembers = data.members.map((person: any) => ({
           ...person,
-          checkedInTime: new Date(person.checkedInTime),
-          lastVisit: person.lastVisit ? new Date(person.lastVisit) : undefined,
-          bandTests: person.bandTests?.map((test: any) => ({
-            ...test,
-            issuedAt: new Date(test.issuedAt),
-          })) || [],
-        })));
+          checkedInTime: new Date(),
+          bandTests: memberUpdates[person.id]?.bandTests || [],
+          notes: memberUpdates[person.id]?.notes || person.notes || '',
+        }));
+        
+        setPeople(loadedMembers);
       } catch (error) {
-        console.error('Error loading people data:', error);
+        console.error('Error loading members from JSON:', error);
       }
-    }
+    };
+
+    loadMembers();
 
     const savedCheckedIn = localStorage.getItem(STORAGE_KEY);
     if (savedCheckedIn) {
@@ -76,11 +91,6 @@ function App() {
     }
   }, []);
 
-  // Save people data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
-  }, [people]);
-
   // Save checked-in data to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedInPeople));
@@ -91,9 +101,23 @@ function App() {
     localStorage.setItem(GUEST_PASSES_STORAGE_KEY, JSON.stringify(guestPasses));
   }, [guestPasses]);
 
+  // Save member updates (notes, band tests) to localStorage
+  useEffect(() => {
+    const memberUpdates: { [key: string]: any } = {};
+    people.forEach(person => {
+      if (!person.isGuest) {
+        memberUpdates[person.id] = {
+          notes: person.notes || '',
+          bandTests: person.bandTests || [],
+        };
+      }
+    });
+    localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(memberUpdates));
+  }, [people]);
+
   const handleAddPerson = (firstName: string, lastName: string, age: number | undefined, personType: string) => {
     const newPerson: Person = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: `guest-${Date.now()}-${Math.random()}`,
       firstName,
       lastName,
       checkedInTime: new Date(),
@@ -101,6 +125,7 @@ function App() {
       age,
       familyName: lastName,
       bandTests: [],
+      isGuest: true,
     };
     setPeople((previousPeople) => [...previousPeople, newPerson]);
   };
@@ -179,7 +204,7 @@ function App() {
     if (selectedPerson) {
       handleUpdatePerson({
         ...selectedPerson,
-        notes: editedNotes || undefined,
+        notes: editedNotes || '',
       });
       setIsEditingNotes(false);
       setToastMessage('Notes saved!');
@@ -245,13 +270,7 @@ function App() {
               variant="light"
               onClick={() => setShowAddModal(true)}
             >
-              + Add Person
-            </Button>
-            <Button
-              variant="outline-danger"
-              onClick={() => setShowDeleteModal(true)}
-            >
-              Delete Person
+              + Add Temp Person
             </Button>
             <Button 
               variant="danger" 
