@@ -1,25 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Container, Button, Row, Col, Navbar, Card, Alert, Modal } from 'react-bootstrap';
-import { Person } from './types/Person';
+import { Person, GuestPass } from './types/Person';
 import AddPersonModal from './components/AddPersonModal';
 import SearchBar from './components/SearchBar';
 import PersonList from './components/PersonList';
 import BandTestModal from './components/BandTestModal';
+import DeletePersonModal from './components/DeletePersonModal';
+import SignInGuestModal from './components/SignInGuestModal';
 
 const STORAGE_KEY = 'poolCheckInData';
 const PEOPLE_STORAGE_KEY = 'poolPeople';
+const GUEST_PASSES_STORAGE_KEY = 'poolGuestPasses';
 const TOAST_DURATION_MS = 2200;
 
 function App() {
   const [people, setPeople] = useState<Person[]>([]);
   const [checkedInPeople, setCheckedInPeople] = useState<Person[]>([]);
+  const [guestPasses, setGuestPasses] = useState<GuestPass[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBandTestModal, setShowBandTestModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showGuestModal, setShowGuestModal] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [showSignOutAllWarning, setShowSignOutAllWarning] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [editedNotes, setEditedNotes] = useState('');
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -29,6 +37,8 @@ function App() {
         const parsedData = JSON.parse(savedPeople);
         setPeople(parsedData.map((person: any) => ({
           ...person,
+          checkedInTime: new Date(person.checkedInTime),
+          lastVisit: person.lastVisit ? new Date(person.lastVisit) : undefined,
           bandTests: person.bandTests?.map((test: any) => ({
             ...test,
             issuedAt: new Date(test.issuedAt),
@@ -54,6 +64,16 @@ function App() {
         console.error('Error loading checked-in data:', error);
       }
     }
+
+    const savedGuestPasses = localStorage.getItem(GUEST_PASSES_STORAGE_KEY);
+    if (savedGuestPasses) {
+      try {
+        const parsedPasses = JSON.parse(savedGuestPasses);
+        setGuestPasses(parsedPasses);
+      } catch (error) {
+        console.error('Error loading guest passes:', error);
+      }
+    }
   }, []);
 
   // Save people data to localStorage whenever it changes
@@ -65,6 +85,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedInPeople));
   }, [checkedInPeople]);
+
+  // Save guest passes to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(GUEST_PASSES_STORAGE_KEY, JSON.stringify(guestPasses));
+  }, [guestPasses]);
 
   const handleAddPerson = (firstName: string, lastName: string, age: number | undefined, personType: string) => {
     const newPerson: Person = {
@@ -78,6 +103,10 @@ function App() {
       bandTests: [],
     };
     setPeople((previousPeople) => [...previousPeople, newPerson]);
+  };
+
+  const handleDeletePerson = (personId: string) => {
+    setPeople((previousPeople) => previousPeople.filter(p => p.id !== personId));
   };
 
   const handleSignIn = (person: Person) => {
@@ -101,6 +130,22 @@ function App() {
     );
     
     setToastMessage(`${person.firstName} ${person.lastName} signed in!`);
+    setShowToast(true);
+  };
+
+  const handleSignInGuest = (guest: Person, sponsoringMemberId: string, usedPass: boolean) => {
+    const guestWithMemberId = {
+      ...guest,
+      sponsoringMemberId,
+    };
+    
+    // Add guest to people list
+    setPeople((previousPeople) => [...previousPeople, guestWithMemberId]);
+    
+    // Sign guest in
+    handleSignIn(guestWithMemberId);
+    
+    setToastMessage(`${guest.firstName} ${guest.lastName} signed in as guest!`);
     setShowToast(true);
   };
 
@@ -130,6 +175,36 @@ function App() {
     setSelectedPerson(updatedPerson);
   };
 
+  const handleSaveNotes = () => {
+    if (selectedPerson) {
+      handleUpdatePerson({
+        ...selectedPerson,
+        notes: editedNotes || undefined,
+      });
+      setIsEditingNotes(false);
+      setToastMessage('Notes saved!');
+      setShowToast(true);
+    }
+  };
+
+  const handleResetGuestPasses = () => {
+    if (selectedPerson) {
+      const familyName = selectedPerson.familyName ?? selectedPerson.lastName;
+      const updatedPasses = guestPasses.map((p) =>
+        p.familyName === familyName
+          ? { ...p, passesRemaining: 4 }
+          : p
+      );
+      // If family doesn't exist, create it
+      if (!updatedPasses.find(p => p.familyName === familyName)) {
+        updatedPasses.push({ familyName, passesRemaining: 4 });
+      }
+      setGuestPasses(updatedPasses);
+      setToastMessage('Guest passes reset to 4!');
+      setShowToast(true);
+    }
+  };
+
   useEffect(() => {
     if (!showToast) {
       return undefined;
@@ -138,9 +213,14 @@ function App() {
     return () => clearTimeout(timer);
   }, [showToast, toastMessage]);
 
+  const getGuestPassesRemaining = (familyName: string): number => {
+    const passes = guestPasses.find(p => p.familyName === familyName);
+    return passes ? passes.passesRemaining : 4;
+  };
+
   const selectedFamilyName = selectedPerson?.familyName ?? selectedPerson?.lastName;
   const selectedFamily = selectedPerson
-    ? people.filter((person) => (person.familyName ?? person.lastName) === selectedFamilyName)
+    ? people.filter((person) => (person.familyName ?? person.lastName) === selectedFamilyName && !person.isGuest)
     : [];
 
   return (
@@ -156,10 +236,22 @@ function App() {
               Band Test
             </Button>
             <Button
+              variant="info"
+              onClick={() => setShowGuestModal(true)}
+            >
+              Sign In Guest
+            </Button>
+            <Button
               variant="light"
               onClick={() => setShowAddModal(true)}
             >
               + Add Person
+            </Button>
+            <Button
+              variant="outline-danger"
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Delete Person
             </Button>
             <Button 
               variant="danger" 
@@ -198,34 +290,62 @@ function App() {
                     <div><strong>Family Name:</strong> {selectedPerson.familyName ?? selectedPerson.lastName}</div>
                     <div><strong>Member Type:</strong> {selectedPerson.personType ?? 'Swim Club Membership'}</div>
                     <div><strong>Last Visit:</strong> {selectedPerson.lastVisit ? new Date(selectedPerson.lastVisit).toLocaleDateString() : 'N/A'}</div>
+                    {!selectedPerson.isGuest && (
+                      <div><strong>Guest Passes Remaining:</strong> {getGuestPassesRemaining(selectedPerson.familyName ?? selectedPerson.lastName)}</div>
+                    )}
                   </div>
                   <Card className="mt-3">
                     <Card.Header>Notes</Card.Header>
                     <Card.Body>
-                      <textarea
-                        className="form-control"
-                        rows={3}
-                        value={selectedPerson.notes ?? ''}
-                        onChange={(e) =>
-                          handleUpdatePerson({
-                            ...selectedPerson,
-                            notes: e.target.value || undefined,
-                          })
-                        }
-                        placeholder="Add notes here..."
-                      />
-                      <small className="text-muted d-block mt-2">Changes save automatically</small>
+                      {!isEditingNotes ? (
+                        <>
+                          <p className="text-muted">{selectedPerson.notes || 'No notes provided.'}</p>
+                          <Button variant="primary" size="sm" onClick={() => {
+                            setIsEditingNotes(true);
+                            setEditedNotes(selectedPerson.notes || '');
+                          }}>
+                            EDIT
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <textarea
+                            className="form-control"
+                            rows={3}
+                            value={editedNotes}
+                            onChange={(e) => setEditedNotes(e.target.value)}
+                            placeholder="Add notes here..."
+                          />
+                          <div className="d-flex gap-2 mt-2">
+                            <Button variant="success" size="sm" onClick={handleSaveNotes}>
+                              SAVE
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => setIsEditingNotes(false)}>
+                              CANCEL
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </Card.Body>
                   </Card>
                   <div className="d-flex gap-2 mt-3">
-                    <Button variant="secondary" className="w-100" onClick={() => setSelectedPerson(null)}>BACK</Button>
+                    <Button variant="secondary" className="flex-fill" onClick={() => setSelectedPerson(null)}>BACK</Button>
                   </div>
+                  {!selectedPerson.isGuest && (
+                    <Button variant="warning" className="w-100 mt-3" onClick={handleResetGuestPasses}>
+                      Reset Guest Passes
+                    </Button>
+                  )}
                   <Card className="mt-3">
                     <Card.Header>Family Information</Card.Header>
                     <Card.Body>
-                      {selectedFamily.map((person) => (
-                        <div key={person.id}>{person.firstName} {person.lastName}</div>
-                      ))}
+                      {selectedFamily.length > 0 ? (
+                        selectedFamily.map((person) => (
+                          <div key={person.id}>{person.firstName} {person.lastName}</div>
+                        ))
+                      ) : (
+                        <p className="text-muted">No family members.</p>
+                      )}
                     </Card.Body>
                   </Card>
                 </Card.Body>
@@ -263,6 +383,23 @@ function App() {
         onHide={() => setShowBandTestModal(false)}
         people={people}
         onUpdatePerson={handleUpdatePerson}
+      />
+
+      <DeletePersonModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        people={people}
+        checkedInPeople={checkedInPeople}
+        onDeletePerson={handleDeletePerson}
+      />
+
+      <SignInGuestModal
+        show={showGuestModal}
+        onHide={() => setShowGuestModal(false)}
+        people={people}
+        guestPasses={guestPasses}
+        onSignInGuest={handleSignInGuest}
+        onUpdateGuestPasses={setGuestPasses}
       />
 
       <AddPersonModal
