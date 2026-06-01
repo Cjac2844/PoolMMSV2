@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Modal, Form, Button, Table, Card } from 'react-bootstrap';
+import { Modal, Form, Button, Table} from 'react-bootstrap';
 import { Person } from '../types/Person';
 
 interface DeletePersonModalProps {
