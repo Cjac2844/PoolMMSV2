@@ -83,7 +83,6 @@ function AddPersonModal({ show, onHide, onAddPerson }: AddPersonModalProps) {
             >
               <option value="Swim Club Membership">Swim Club Membership</option>
               <option value="Haddon Glen Seahorse Registration">Haddon Glen Seahorse Registration</option>
-              <option value="Guest">Guest</option>
             </Form.Select>
           </Form.Group>
         </Form>

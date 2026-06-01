@@ -79,6 +79,23 @@ function BandTestModal({ show, onHide, people, onUpdatePerson }: BandTestModalPr
     );
   };
 
+  const handleDeleteBand = (testId: string) => {
+    if (!selectedPersonForBand) return;
+
+    if (window.confirm('Are you sure you want to delete this band test?')) {
+      const updatedPerson = {
+        ...selectedPersonForBand,
+        bandTests: selectedPersonForBand.bandTests?.filter(test => test.id !== testId) || [],
+      };
+
+      onUpdatePerson(updatedPerson);
+      setSelectedPersonForBand(updatedPerson);
+      setFilteredPeople(
+        filteredPeople.map(p => p.id === updatedPerson.id ? updatedPerson : p)
+      );
+    }
+  };
+
   const handleClose = () => {
     setSearchTerm('');
     setFilteredPeople([]);
@@ -193,6 +210,7 @@ function BandTestModal({ show, onHide, people, onUpdatePerson }: BandTestModalPr
                     <th>BAND TYPE</th>
                     <th>ISSUED BY</th>
                     <th>ISSUED AT</th>
+                    <th>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,6 +223,15 @@ function BandTestModal({ show, onHide, people, onUpdatePerson }: BandTestModalPr
                       </td>
                       <td>{test.issuedBy}</td>
                       <td>{new Date(test.issuedAt).toLocaleString()}</td>
+                      <td>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleDeleteBand(test.id)}
+                        >
+                          DELETE
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
